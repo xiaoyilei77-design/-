@@ -25,13 +25,20 @@ interface ExecutionContext {
 
 const submissionWindows = new Map<string, { count: number; expiresAt: number }>();
 let tenantTokenCache: { token: string; expiresAt: number } | null = null;
+const GITHUB_PAGES_ORIGIN = "https://xiaoyilei77-design.github.io";
 
-const jsonResponse = (body: Record<string, unknown>, status = 200) => new Response(JSON.stringify(body), {
+const corsHeaders = (origin: string | null) => origin === GITHUB_PAGES_ORIGIN ? {
+  "Access-Control-Allow-Origin": GITHUB_PAGES_ORIGIN,
+  "Vary": "Origin",
+} : {};
+
+const jsonResponse = (body: Record<string, unknown>, status = 200, origin: string | null = null) => new Response(JSON.stringify(body), {
   status,
   headers: {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
+    ...corsHeaders(origin),
   },
 });
 
@@ -56,26 +63,41 @@ async function getTenantToken(env: Env, signal: AbortSignal): Promise<string> {
 }
 
 async function handlePreorder(request: Request, env: Env): Promise<Response> {
-  if (request.method !== "POST") return jsonResponse({ message: "仅支持提交登记信息。" }, 405);
+  const origin = request.headers.get("origin");
+  const requestOrigin = new URL(request.url).origin;
+  const isAllowedOrigin = !origin || origin === requestOrigin || origin === GITHUB_PAGES_ORIGIN;
+
+  if (!isAllowedOrigin) return jsonResponse({ message: "请求来源无效。" }, 403);
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        ...corsHeaders(origin),
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Max-Age": "86400",
+      },
+    });
+  }
+
+  const respond = (body: Record<string, unknown>, status = 200) => jsonResponse(body, status, origin);
+
+  if (request.method !== "POST") return respond({ message: "仅支持提交登记信息。" }, 405);
 
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().startsWith("application/json")) {
-    return jsonResponse({ message: "提交格式不正确。" }, 415);
-  }
-
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) {
-    return jsonResponse({ message: "请求来源无效。" }, 403);
+    return respond({ message: "提交格式不正确。" }, 415);
   }
 
   const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > 4096) return jsonResponse({ message: "提交内容过长。" }, 413);
+  if (contentLength > 4096) return respond({ message: "提交内容过长。" }, 413);
 
   const clientId = request.headers.get("cf-connecting-ip") ?? "unknown";
   const now = Date.now();
   const currentWindow = submissionWindows.get(clientId);
   if (currentWindow && currentWindow.expiresAt > now && currentWindow.count >= 5) {
-    return jsonResponse({ message: "提交过于频繁，请十分钟后再试。" }, 429);
+    return respond({ message: "提交过于频繁，请十分钟后再试。" }, 429);
   }
   submissionWindows.set(clientId, currentWindow && currentWindow.expiresAt > now
     ? { ...currentWindow, count: currentWindow.count + 1 }
@@ -86,25 +108,25 @@ async function handlePreorder(request: Request, env: Env): Promise<Response> {
   try {
     const rawBody = await request.text();
     if (new TextEncoder().encode(rawBody).byteLength > 4096) {
-      return jsonResponse({ message: "提交内容过长。" }, 413);
+      return respond({ message: "提交内容过长。" }, 413);
     }
     body = JSON.parse(rawBody);
   } catch {
-    return jsonResponse({ message: "提交内容无法解析。" }, 400);
+    return respond({ message: "提交内容无法解析。" }, 400);
   }
 
-  if (!body || typeof body !== "object") return jsonResponse({ message: "请完整填写登记信息。" }, 400);
+  if (!body || typeof body !== "object") return respond({ message: "请完整填写登记信息。" }, 400);
   const value = body as Record<string, unknown>;
   const name = typeof value.name === "string" ? value.name.trim() : "";
   const phone = typeof value.phone === "string" ? value.phone.replace(/\s+/g, "") : "";
   const address = typeof value.address === "string" ? value.address.trim() : "";
   const company = typeof value.company === "string" ? value.company.trim() : "";
 
-  if (company) return jsonResponse({ message: "登记已提交。" });
-  if (value.consent !== true) return jsonResponse({ message: "请先同意信息用途说明。" }, 400);
-  if (name.length < 2 || name.length > 30) return jsonResponse({ message: "姓名需为 2 至 30 个字符。" }, 400);
-  if (!/^1[3-9]\d{9}$/.test(phone)) return jsonResponse({ message: "请填写有效的 11 位中国大陆手机号。" }, 400);
-  if (address.length < 5 || address.length > 200) return jsonResponse({ message: "地址需为 5 至 200 个字符。" }, 400);
+  if (company) return respond({ message: "登记已提交。" });
+  if (value.consent !== true) return respond({ message: "请先同意信息用途说明。" }, 400);
+  if (name.length < 2 || name.length > 30) return respond({ message: "姓名需为 2 至 30 个字符。" }, 400);
+  if (!/^1[3-9]\d{9}$/.test(phone)) return respond({ message: "请填写有效的 11 位中国大陆手机号。" }, 400);
+  if (address.length < 5 || address.length > 200) return respond({ message: "地址需为 5 至 200 个字符。" }, 400);
 
   try {
     const controller = new AbortController();
@@ -125,10 +147,10 @@ async function handlePreorder(request: Request, env: Env): Promise<Response> {
     const result = await upstream.json() as { code?: number };
     if (!upstream.ok || result.code !== 0) throw new Error("Feishu write failed");
   } catch {
-    return jsonResponse({ message: "暂时无法完成登记，请稍后再试。" }, 502);
+    return respond({ message: "暂时无法完成登记，请稍后再试。" }, 502);
   }
 
-  return jsonResponse({ message: "登记成功，信息已写入飞书多维表格。" });
+  return respond({ message: "登记成功，信息已写入飞书多维表格。" });
 }
 
 // Image security config. SVG sources with .svg extension auto-skip the

@@ -57,6 +57,8 @@ test("opens the Chinese registration form from the experience invite modal", asy
   assert.match(source, /name="address"/);
   assert.match(source, /name="consent"/);
   assert.match(source, /提交体验意向/);
+  assert.match(source, /xiaoyilei77-design\.github\.io/);
+  assert.match(source, /fangyan-voice-switch\.xiaoyilei77\.chatgpt\.site\/api\/preorder/);
   assert.doesNotMatch(source, /信息去向|安全写入飞书|写入飞书多维表格/);
 });
 
@@ -90,6 +92,19 @@ test("rejects malformed and cross-origin preorder submissions", async () => {
   }), env, ctx);
   assert.equal(crossOrigin.status, 403);
   assert.deepEqual(await crossOrigin.json(), { message: "请求来源无效。" });
+
+  const githubOrigin = await worker.fetch(new Request("http://localhost/api/preorder", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Origin": "https://xiaoyilei77-design.github.io",
+      "cf-connecting-ip": "198.51.100.25",
+    },
+    body: JSON.stringify({ name: "张", phone: "123", address: "短", consent: true }),
+  }), env, ctx);
+  assert.equal(githubOrigin.status, 400);
+  assert.equal(githubOrigin.headers.get("access-control-allow-origin"), "https://xiaoyilei77-design.github.io");
+  assert.deepEqual(await githubOrigin.json(), { message: "姓名需为 2 至 30 个字符。" });
 
   const oversized = await worker.fetch(new Request("http://localhost/api/preorder", {
     method: "POST",
@@ -128,4 +143,43 @@ test("silently absorbs honeypot submissions without contacting Feishu", async ()
   }), env, ctx);
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { message: "登记已提交。" });
+});
+
+test("answers GitHub Pages CORS preflight and preserves CORS on successful submissions", async () => {
+  const worker = await loadWorker();
+  const origin = "https://xiaoyilei77-design.github.io";
+  const preflight = await worker.fetch(new Request("http://localhost/api/preorder", {
+    method: "OPTIONS",
+    headers: {
+      "Origin": origin,
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "content-type",
+    },
+  }), env, ctx);
+
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get("access-control-allow-origin"), origin);
+  assert.equal(preflight.headers.get("access-control-allow-methods"), "POST, OPTIONS");
+  assert.equal(preflight.headers.get("access-control-allow-headers"), "Content-Type");
+  assert.equal(preflight.headers.get("vary"), "Origin");
+
+  const submission = await worker.fetch(new Request("http://localhost/api/preorder", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Origin": origin,
+      "cf-connecting-ip": "198.51.100.26",
+    },
+    body: JSON.stringify({
+      name: "自动脚本",
+      phone: "13800138000",
+      address: "广东省汕头市测试地址",
+      company: "cors-probe",
+      consent: true,
+    }),
+  }), env, ctx);
+
+  assert.equal(submission.status, 200);
+  assert.equal(submission.headers.get("access-control-allow-origin"), origin);
+  assert.deepEqual(await submission.json(), { message: "登记已提交。" });
 });
