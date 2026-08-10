@@ -70,6 +70,7 @@ const progressItems = [
 const roomNames = ["客厅", "餐厅", "卧室", "走廊"] as const;
 const cadLedPositions = [34.53, 45.58, 56.63, 67.67] as const;
 const cadButtonPositions = [52.33, 60.47, 68.6, 76.74] as const;
+const preorderApiUrl = "https://fangyan-voice-switch.xiaoyilei77.chatgpt.site/api/preorder";
 
 export default function Home() {
   const [lights, setLights] = useState([false, false, false, false]);
@@ -156,7 +157,10 @@ export default function Home() {
     setFormMessage("正在提交，请稍候……");
 
     try {
-      const response = await fetch("/api/preorder", {
+      const endpoint = window.location.hostname === "xiaoyilei77-design.github.io"
+        ? preorderApiUrl
+        : "/api/preorder";
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
