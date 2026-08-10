@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type PointerEvent,
+} from "react";
 
 const navItems = [
   ["product", "产品"],
@@ -69,7 +75,11 @@ export default function Home() {
   const [lights, setLights] = useState([false, false, false, false]);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [planOpen, setPlanOpen] = useState(false);
+  const [registrationOpen, setRegistrationOpen] = useState(false);
+  const [formState, setFormState] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [formMessage, setFormMessage] = useState("");
   const stageRef = useRef<HTMLDivElement | null>(null);
+  const registrationDialogRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => {
@@ -96,6 +106,24 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!registrationOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setRegistrationOpen(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    registrationDialogRef.current?.focus();
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [registrationOpen]);
+
   const moveSpotlight = (event: PointerEvent<HTMLDivElement>) => {
     const target = stageRef.current;
     if (!target) return;
@@ -108,6 +136,48 @@ export default function Home() {
     setLights((current) =>
       current.map((state, stateIndex) => (stateIndex === index ? !state : state)),
     );
+  };
+
+  const openRegistration = () => {
+    setFormState("idle");
+    setFormMessage("");
+    setRegistrationOpen(true);
+  };
+
+  const submitPreorder = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (formState === "submitting") return;
+
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const phone = String(data.get("phone") ?? "").replace(/\s+/g, "");
+
+    setFormState("submitting");
+    setFormMessage("正在提交，请稍候……");
+
+    try {
+      const response = await fetch("/api/preorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: String(data.get("name") ?? "").trim(),
+          phone,
+          address: String(data.get("address") ?? "").trim(),
+          company: String(data.get("company") ?? ""),
+          consent: data.get("consent") === "on",
+        }),
+      });
+      const result = await response.json().catch(() => ({})) as { message?: string };
+
+      if (!response.ok) throw new Error(result.message || "提交失败，请稍后再试。");
+
+      form.reset();
+      setFormState("success");
+      setFormMessage("登记成功。我们会在首批体验开放后联系你。");
+    } catch (error) {
+      setFormState("error");
+      setFormMessage(error instanceof Error ? error.message : "提交失败，请稍后再试。");
+    }
   };
 
   return (
@@ -321,9 +391,105 @@ export default function Home() {
         <div className={planOpen ? "preorder-path is-open" : "preorder-path"} aria-hidden={!planOpen}>
           <div><span>一</span><strong>工程基线</strong><p>已完成全网布线、双层铺铜与规则复核</p></div>
           <div><span>二</span><strong>样机实测</strong><p>验证方言、负载、温升、浪涌与长期稳定性</p></div>
-          <div><span>三</span><strong>体验邀请</strong><p>公布真实规格、价格、风险边界与体验名额</p></div>
+          <button className="preorder-path-action" type="button" onClick={openRegistration} tabIndex={planOpen ? 0 : -1}>
+            <span>三</span><strong>体验邀请</strong><p>填写体验信息，优先获得首批邀请与进展通知</p><i>点击登记 →</i>
+          </button>
         </div>
       </section>
+
+      {registrationOpen && (
+        <div className="registration-overlay">
+          <div
+            className="registration-dialog"
+            ref={registrationDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="registration-title"
+            tabIndex={-1}
+          >
+            <button
+              className="registration-close"
+              type="button"
+              aria-label="关闭体验登记"
+              onClick={() => setRegistrationOpen(false)}
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+            <div className="registration-intro">
+              <p className="section-kicker">抢先体验登记</p>
+              <h3 id="registration-title">留下你的信息，<br />优先获得首批邀请。</h3>
+              <p>
+                这是一份体验意向登记，不是付款订单。请填写真实联系信息，
+                用于首批体验联系、地区安排与寄送可行性评估。
+              </p>
+              <div className="registration-step"><span>01</span><p>填写体验信息</p></div>
+              <div className="registration-step"><span>02</span><p>等待首批邀请</p></div>
+            </div>
+
+            <form className="preorder-form registration-form" onSubmit={submitPreorder} noValidate={false}>
+              <div className="form-field">
+              <label htmlFor="preorder-name">姓名</label>
+              <input
+                id="preorder-name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                minLength={2}
+                maxLength={30}
+                placeholder="请输入姓名"
+                required
+              />
+              </div>
+              <div className="form-field">
+              <label htmlFor="preorder-phone">手机号</label>
+              <input
+                id="preorder-phone"
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                inputMode="numeric"
+                pattern="1[3-9][0-9]{9}"
+                maxLength={11}
+                placeholder="请输入 11 位中国大陆手机号"
+                required
+              />
+              </div>
+              <div className="form-field">
+              <label htmlFor="preorder-address">地址</label>
+              <textarea
+                id="preorder-address"
+                name="address"
+                autoComplete="street-address"
+                minLength={5}
+                maxLength={200}
+                rows={4}
+                placeholder="请输入省、市、区及详细地址"
+                required
+              />
+              </div>
+              <div className="form-trap" aria-hidden="true">
+                <label htmlFor="preorder-company">公司</label>
+                <input id="preorder-company" name="company" type="text" tabIndex={-1} autoComplete="off" />
+              </div>
+              <label className="form-consent">
+                <input name="consent" type="checkbox" required />
+                <span>我同意将以上信息用于首批体验联系、地区安排与寄送可行性评估。</span>
+              </label>
+              <button className="form-submit" type="submit" disabled={formState === "submitting"}>
+                {formState === "submitting" ? "正在提交…" : "提交体验意向"}
+                <span aria-hidden="true">→</span>
+              </button>
+              <p
+                className={`form-status ${formState === "success" ? "is-success" : ""} ${formState === "error" ? "is-error" : ""}`}
+                role="status"
+                aria-live="polite"
+              >
+                {formMessage || "这是一份体验意向登记，本页面不收取订金。"}
+              </p>
+            </form>
+          </div>
+        </div>
+      )}
 
       <section className="status" id="status">
         <div className="section-shell status-grid">

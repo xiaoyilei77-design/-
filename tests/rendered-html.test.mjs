@@ -1,91 +1,131 @@
 import assert from "node:assert/strict";
-import { access, readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const developmentPreviewMeta =
-  /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
-const templateRoot = new URL("../", import.meta.url);
-const previewRoot = new URL("../app/_sites-preview/", import.meta.url);
-
-async function render() {
+async function loadWorker() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-
-  return worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
-  );
+  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}-${Math.random()}`);
+  return (await import(workerUrl.href)).default;
 }
 
-test("server-renders the starter loading skeleton", async () => {
-  const response = await render();
+const env = {
+  ASSETS: {
+    fetch: async () => new Response("Not found", { status: 404 }),
+  },
+  FEISHU_APP_ID: "test-app-id",
+  FEISHU_APP_SECRET: "test-app-secret",
+  FEISHU_BASE_TOKEN: "test-base-token",
+  FEISHU_TABLE_ID: "test-table-id",
+};
+
+const ctx = {
+  waitUntil() {},
+  passThroughOnException() {},
+};
+
+test("renders the Chinese product page with registration deferred to the experience invite", async () => {
+  const worker = await loadWorker();
+  const response = await worker.fetch(new Request("http://localhost/", {
+    headers: { accept: "text/html" },
+  }), env, ctx);
+
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, developmentPreviewMeta);
-  assert.match(html, /<title>Your site is taking shape<\/title>/i);
-  assert.match(html, /Building your site/);
-  assert.match(html, /Your site is taking shape/);
-  assert.match(
-    html,
-    /Your first version will appear here automatically when it’s ready\./,
-  );
-  assert.doesNotMatch(html, /Codex/);
-  assert.match(html, /react-loading-skeleton/);
-  assert.match(html, /role="status"/);
+  assert.match(html, /<html lang="zh-CN">/);
+  assert.match(html, /方言语音控制开关/);
+  assert.match(html, /体验邀请/);
+  assert.match(html, /点击登记/);
+  assert.doesNotMatch(html, /name="name"/);
+  assert.doesNotMatch(html, /name="phone"/);
+  assert.doesNotMatch(html, /name="address"/);
+  assert.doesNotMatch(html, /信息去向|安全写入|飞书/);
+  assert.doesNotMatch(html, /<iframe\b/i);
+  assert.doesNotMatch(html, /V01/i);
 });
 
-test("keeps the loading skeleton scoped and disposable", async () => {
-  const [preview, css, page, layout, packageJson, files] = await Promise.all([
-    readFile(new URL("SkeletonPreview.tsx", previewRoot), "utf8"),
-    readFile(new URL("preview.css", previewRoot), "utf8"),
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-    readdir(previewRoot),
-  ]);
+test("opens the Chinese registration form from the experience invite modal", async () => {
+  const source = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.deepEqual(files.sort(), ["SkeletonPreview.tsx", "preview.css"]);
-  assert.match(preview, /from "react-loading-skeleton"/);
-  assert.match(preview, /baseColor="#eceae7"/);
-  assert.match(preview, /highlightColor="#f9f8f6"/);
-  assert.match(preview, /duration=\{2\.8\}/);
-  assert.match(preview, /sites-skeleton-search-placeholder/);
-  assert.match(packageJson, /"react-loading-skeleton": "3\.5\.0"/);
+  assert.match(source, /onClick=\{openRegistration\}/);
+  assert.match(source, /role="dialog"/);
+  assert.match(source, /aria-modal="true"/);
+  assert.match(source, /抢先体验登记/);
+  assert.match(source, /name="name"/);
+  assert.match(source, /name="phone"/);
+  assert.match(source, /name="address"/);
+  assert.match(source, /name="consent"/);
+  assert.match(source, /提交体验意向/);
+  assert.doesNotMatch(source, /信息去向|安全写入飞书|写入飞书多维表格/);
+});
 
-  const shellIndex = preview.indexOf('className="sites-skeleton-shell"');
-  const statusIndex = preview.indexOf('className="sites-skeleton-status"');
-  assert.ok(shellIndex >= 0 && statusIndex > shellIndex);
-  assert.match(css, /position:\s*fixed/);
-  assert.match(css, /inset:\s*0/);
-  assert.match(css, /opacity:\s*0\.52/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.doesNotMatch(css, /#020617|canvas|pets|progress/i);
-  assert.doesNotMatch(
-    preview,
-    /loading-spinner|status-mark|status-progress|canvas|cookie|random/i,
-  );
+test("rejects malformed and cross-origin preorder submissions", async () => {
+  const worker = await loadWorker();
+  const malformed = await worker.fetch(new Request("http://localhost/api/preorder", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Origin": "http://localhost",
+      "cf-connecting-ip": "198.51.100.21",
+    },
+    body: JSON.stringify({ name: "张", phone: "123", address: "短", consent: true }),
+  }), env, ctx);
+  assert.equal(malformed.status, 400);
+  assert.deepEqual(await malformed.json(), { message: "姓名需为 2 至 30 个字符。" });
 
-  assert.match(page, /export const metadata:\s*Metadata/);
-  assert.match(page, /"codex-preview": "development"/);
-  assert.match(page, /<SkeletonPreview \/>/);
-  assert.match(layout, /title:\s*"Starter Project"/);
-  assert.doesNotMatch(layout, /codex-preview|_sites-preview|themeColor|\bViewport\b/);
-  assert.doesNotMatch(css, /(^|\s)(html|body)\s*\{/m);
+  const crossOrigin = await worker.fetch(new Request("http://localhost/api/preorder", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Origin": "https://example.com",
+      "cf-connecting-ip": "198.51.100.22",
+    },
+    body: JSON.stringify({
+      name: "测试用户",
+      phone: "13800138000",
+      address: "广东省汕头市测试地址",
+      consent: true,
+    }),
+  }), env, ctx);
+  assert.equal(crossOrigin.status, 403);
+  assert.deepEqual(await crossOrigin.json(), { message: "请求来源无效。" });
 
-  await assert.rejects(
-    access(new URL("public/_sites-preview", templateRoot)),
-  );
+  const oversized = await worker.fetch(new Request("http://localhost/api/preorder", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Origin": "http://localhost",
+      "cf-connecting-ip": "198.51.100.24",
+    },
+    body: JSON.stringify({
+      name: "测试用户",
+      phone: "13800138000",
+      address: "广".repeat(5000),
+      consent: true,
+    }),
+  }), env, ctx);
+  assert.equal(oversized.status, 413);
+  assert.deepEqual(await oversized.json(), { message: "提交内容过长。" });
+});
+
+test("silently absorbs honeypot submissions without contacting Feishu", async () => {
+  const worker = await loadWorker();
+  const response = await worker.fetch(new Request("http://localhost/api/preorder", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Origin": "http://localhost",
+      "cf-connecting-ip": "198.51.100.23",
+    },
+    body: JSON.stringify({
+      name: "自动脚本",
+      phone: "13800138000",
+      address: "广东省汕头市测试地址",
+      company: "spam-bot",
+      consent: true,
+    }),
+  }), env, ctx);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { message: "登记已提交。" });
 });
