@@ -364,11 +364,11 @@ export default function Home() {
                 <p>四枚独立小按键 · 四个导光点 · 右下拾音孔</p>
               </figcaption>
             </figure>
-            <figure className="engineering-view-card" data-reveal>
+            <figure className="engineering-view-card assembly-view" data-reveal>
               <img src="/cad-enclosure-current.svg" alt="当前方言语音控制开关外壳装配 CAD 线框图" />
               <figcaption>
                 <div><span>03</span><strong>外壳装配 CAD</strong></div>
-                <p>当前工程外框与内部装配关系</p>
+                <p>外框、载板、四键与导光结构的当前装配关系</p>
               </figcaption>
             </figure>
           </div>

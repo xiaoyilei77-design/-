@@ -62,6 +62,21 @@ test("opens the Chinese registration form from the experience invite modal", asy
   assert.doesNotMatch(source, /信息去向|安全写入飞书|写入飞书多维表格/);
 });
 
+test("ships high-resolution engineering views without altering the CAD path set", async () => {
+  const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const pcbImage = await readFile(new URL("../public/pcb-live-routing.png", import.meta.url));
+  const enclosureSvg = await readFile(new URL("../public/cad-enclosure-current.svg", import.meta.url), "utf8");
+
+  assert.equal(pcbImage.toString("ascii", 1, 4), "PNG");
+  assert.equal(pcbImage.readUInt32BE(16), 2400);
+  assert.equal(pcbImage.readUInt32BE(20), 2400);
+  assert.equal((enclosureSvg.match(/<path\b/g) ?? []).length, 219);
+  assert.match(enclosureSvg, /viewBox="0 0 1200 900"/);
+  assert.match(enclosureSvg, /stroke="#d7b87e"/);
+  assert.match(pageSource, /className="engineering-view-card assembly-view"/);
+  assert.match(pageSource, /外框、载板、四键与导光结构的当前装配关系/);
+});
+
 test("rejects malformed and cross-origin preorder submissions", async () => {
   const worker = await loadWorker();
   const malformed = await worker.fetch(new Request("http://localhost/api/preorder", {

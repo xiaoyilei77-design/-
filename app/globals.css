@@ -203,10 +203,13 @@ nav a:hover, nav a:focus-visible { opacity: 1; }
 .engineering-views-heading > p { margin: 0; color: #6c6458; line-height: 2; }
 .engineering-view-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 24px; }
 .cad-view-stack { display: grid; grid-template-rows: repeat(2, 1fr); gap: 24px; }
-.engineering-view-card { margin: 0; overflow: hidden; border: 1px solid var(--line); background: #ebe5da; }
-.engineering-view-card img { width: 100%; height: 310px; object-fit: contain; padding: 25px; background: #f7f4ed; }
-.engineering-view-card.board-view img { height: 690px; padding: 0; background: #070b0a; }
-.engineering-view-card figcaption { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; min-height: 112px; padding: 24px 28px; }
+.engineering-view-card { position: relative; isolation: isolate; margin: 0; overflow: hidden; border: 1px solid rgba(126,106,76,.24); background: #ebe5da; box-shadow: 0 24px 70px rgba(38,31,23,.08); transition: transform .45s ease, box-shadow .45s ease; }
+.engineering-view-card:hover { transform: translateY(-5px); box-shadow: 0 32px 90px rgba(38,31,23,.13); }
+.engineering-view-card::after { content:""; position:absolute; z-index:1; inset:0; border:1px solid rgba(255,255,255,.32); pointer-events:none; }
+.engineering-view-card img { display:block; width: 100%; height: 310px; object-fit: contain; padding: 25px; background: #f7f4ed; }
+.engineering-view-card.board-view img { height: 690px; padding: 0; background: #050908; }
+.engineering-view-card.assembly-view img { padding: 18px; background: radial-gradient(circle at 58% 42%, #18362e 0%, #0c1d19 52%, #07100e 100%); }
+.engineering-view-card figcaption { position:relative; z-index:2; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; min-height: 112px; padding: 24px 28px; }
 .engineering-view-card figcaption div { display: flex; align-items: center; gap: 15px; }
 .engineering-view-card figcaption span { color: #9b7345; font-family: Georgia, serif; font-size: 11px; }
 .engineering-view-card figcaption strong { font-family: "Songti SC", serif; font-size: 20px; font-weight: 400; }
