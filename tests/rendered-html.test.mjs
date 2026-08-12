@@ -70,6 +70,7 @@ test("ships high-resolution engineering views without altering the CAD path set"
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const pcbImage = await readFile(new URL("../public/pcb-live-routing.png", import.meta.url));
   const conceptImage = await readFile(new URL("../public/product-concept-thin-touch.png", import.meta.url));
+  const standbyConceptImage = await readFile(new URL("../public/product-concept-thin-touch-standby.png", import.meta.url));
   const enclosureSvg = await readFile(new URL("../public/cad-enclosure-current.svg", import.meta.url), "utf8");
 
   assert.equal(pcbImage.toString("ascii", 1, 4), "PNG");
@@ -78,14 +79,19 @@ test("ships high-resolution engineering views without altering the CAD path set"
   assert.equal(conceptImage.toString("ascii", 1, 4), "PNG");
   assert.equal(conceptImage.readUInt32BE(16), 1672);
   assert.equal(conceptImage.readUInt32BE(20), 941);
+  assert.equal(standbyConceptImage.toString("ascii", 1, 4), "PNG");
+  assert.equal(standbyConceptImage.readUInt32BE(16), 1672);
+  assert.equal(standbyConceptImage.readUInt32BE(20), 941);
   assert.equal((enclosureSvg.match(/<path\b/g) ?? []).length, 219);
   assert.match(enclosureSvg, /viewBox="0 0 1200 900"/);
   assert.match(enclosureSvg, /stroke="#d7b87e"/);
   assert.match(pageSource, /className: "assembly-view"/);
   assert.match(pageSource, /现有 CAD 仍是机械四键结构基线/);
   assert.match(pageSource, /待改四块齐平触控面/);
-  assert.match(pageSource, /product-concept-thin-touch\.png/);
-  assert.match(pageSource, /20260812-engineering2/);
+  assert.match(pageSource, /20260812-aligned1/);
+  assert.match(pageSource, /product-concept-thin-touch-standby\.png/);
+  assert.match(pageSource, /当前 PCB 保存态/);
+  assert.match(pageSource, /后续 PCB 修改后会另版更新/);
   assert.equal((pageSource.match(/className="engineering-media-button"/g) ?? []).length, 1);
   assert.match(pageSource, /点击查看高清工程图/);
   assert.match(pageSource, /aria-label="放大工程图"/);
@@ -101,6 +107,7 @@ test("maps four accessible light controls directly onto the first product image"
   assert.match(pageSource, /data-touch-zone=\{index \+ 1\}/);
   assert.match(pageSource, /onClick=\{\(\) => toggleLight\(index\)\}/);
   assert.match(pageSource, /直接轻触图中四块面板，模拟开关灯/);
+  assert.match(pageSource, /className="touch-light"/);
 });
 
 test("rejects malformed and cross-origin preorder submissions", async () => {

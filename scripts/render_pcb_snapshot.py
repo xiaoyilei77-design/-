@@ -97,7 +97,7 @@ def main() -> None:
     title_font = load_font(54 * SUPERSAMPLE, serif=True)
     meta_font = load_font(19 * SUPERSAMPLE)
     legend_font = load_font(18 * SUPERSAMPLE)
-    draw.text((BOARD_LEFT, 96 * SUPERSAMPLE), "PCB 保存态工程视图", font=title_font, fill=(239, 229, 208, 244))
+    draw.text((BOARD_LEFT, 96 * SUPERSAMPLE), "PCB 当前保存态工程视图", font=title_font, fill=(239, 229, 208, 244))
     draw.text(
         (BOARD_LEFT, 202 * SUPERSAMPLE),
         f"86 × 86 毫米  ·  74 个器件  ·  {pad_count} 个焊盘  ·  {route_count} 个网络  ·  {path_count} 段走线  ·  {via_count} 个过孔",
@@ -280,7 +280,7 @@ def main() -> None:
 
     footer_font = load_font(16 * SUPERSAMPLE)
     final_draw.text((BOARD_LEFT, 2288 * SUPERSAMPLE), "来源：V01_PCB_Live_Route_Snapshot_20260809.json", font=footer_font, fill=(158, 171, 162, 150))
-    disclaimer = "保存态工程可视化 · 非实物照片 · 非量产发布证明"
+    disclaimer = "当前保存态 · 后续改板另版更新 · 非实物 / 量产证明"
     disclaimer_box = final_draw.textbbox((0, 0), disclaimer, font=footer_font)
     final_draw.text((BOARD_LEFT + BOARD_SIZE - (disclaimer_box[2] - disclaimer_box[0]), 2288 * SUPERSAMPLE), disclaimer, font=footer_font, fill=(213, 180, 127, 182))
     image = image.convert("RGB").resize((FINAL_SIZE, FINAL_SIZE), Image.Resampling.LANCZOS)

@@ -96,13 +96,13 @@ const roadmap = [
   },
 ] as const;
 
-const assetVersion = "20260812-engineering2";
+const assetVersion = "20260812-aligned1";
 const engineeringViews = [
   {
     no: "01",
-    title: "PCB 全网路由",
+    title: "PCB 当前保存态路由",
     summary: "50 个网络 · 695 段走线 · 41 个过孔",
-    detail: "由当前已保存 PCB 快照重绘，补充器件位号、焊盘包络、安装槽与工程图例；属于工程可视化，不是实物照片。",
+    detail: "由当前已保存 PCB 快照重绘，补充器件位号、焊盘包络、安装槽与工程图例。它只代表现阶段 PCB 保存态；后续你修改 PCB 后，再从新版工程数据另版更新。",
     src: `pcb-live-routing.png?v=${assetVersion}`,
     alt: "由当前已保存 PCB 路由快照重绘的八十六毫米单板工程图，包含器件位号、焊盘、走线和安装槽",
     className: "board-view",
@@ -334,7 +334,7 @@ export default function Home() {
             {Array.from({ length: 18 }).map((_, index) => <i key={index} />)}
           </div>
           <div className="hero-product-visual">
-            <img src={`product-concept-thin-touch.png?v=${assetVersion}`} alt="安装在墙面的薄型四路方言语音控制开关，正面分成四块独立齐平触控面" />
+            <img src={`product-concept-thin-touch-standby.png?v=${assetVersion}`} alt="安装在墙面的薄型四路方言语音控制开关，正面分成四块独立齐平触控面，四个状态灯均为待机状态" />
             <div className="product-touch-map" aria-label="直接轻触图中的四块面板">
               {lights.map((isOn, index) => (
                 <button
@@ -346,7 +346,7 @@ export default function Home() {
                   data-touch-zone={index + 1}
                 >
                   <span>{roomNames[index]}</span>
-                  <i aria-hidden="true" />
+                  <i className="touch-light" aria-hidden="true" />
                 </button>
               ))}
             </div>
@@ -442,7 +442,7 @@ export default function Home() {
 
       <section className="showcase" id="showcase">
         <div className="showcase-media" data-reveal>
-          <img src={`product-concept-thin-touch.png?v=${assetVersion}`} alt="薄型四路方言语音控制开关概念渲染，正面清晰分成四块独立齐平触控面" />
+          <img src={`product-concept-thin-touch-standby.png?v=${assetVersion}`} alt="薄型四路方言语音控制开关概念渲染，正面清晰分成四块独立齐平触控面" />
           <div className="showcase-overlay">
             <p>方言语音控制开关</p>
             <span>千音 · 听懂每一种乡音</span>
@@ -485,10 +485,14 @@ export default function Home() {
             <h2 id="engineering-views-title">不靠想象替代结构，<br />每一张图都有来源。</h2>
           </div>
           <p>
-            PCB 图由最新已保存路由快照直接重绘；正面与装配图直接取自当前外壳 CAD。
-            现有 CAD 仍是机械四键结构基线，下一轮需按“四块齐平触控面”重构；这些图不是量产照片，也不代表已通过实物验证。
+            PCB 图由当前已保存路由快照直接重绘，只代表现阶段工程基线，后续 PCB 修改后会另版更新；
+            正面与装配图直接取自当前外壳 CAD。现有 CAD 仍是机械四键结构基线，下一轮需按“四块齐平触控面”重构；
+            这些图不是量产照片，也不代表已通过实物验证。
           </p>
         </div>
+        <p className="engineering-baseline-note" data-reveal>
+          <strong>当前 PCB 保存态</strong><span>用于记录现阶段布局与连线 · 后续改板将另版更新</span>
+        </p>
         <div className="engineering-view-grid">
           {engineeringViews.map((view, index) => (
             <figure
