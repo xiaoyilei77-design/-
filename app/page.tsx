@@ -96,7 +96,7 @@ const roadmap = [
   },
 ] as const;
 
-const assetVersion = "20260812-aligned1";
+const assetVersion = "20260812-touch-cad1";
 const engineeringViews = [
   {
     no: "01",
@@ -109,21 +109,28 @@ const engineeringViews = [
   },
   {
     no: "02",
-    title: "现有正面 CAD 基线",
-    summary: "当前四机械键仅作尺寸对照 · 待改四块齐平触控面",
-    detail: "直接取自当前外壳 CAD 的矢量线框。它用于核对 86 型外廓和四区分割，不代表触控版结构已经完成。",
-    src: `cad-front-face-current.svg?v=${assetVersion}`,
-    alt: "当前方言语音控制开关八十六毫米正面 CAD 线框图",
+    title: "四区齐平触控正面 CAD",
+    summary: "86 × 86 毫米 · 四块等宽纵向触控面 · 4 个灯窗",
+    detail: "由参数化 CAD 重新生成，正面结构与主页产品图一致：四块独立、等宽、纵向齐平触控面，保留四个灯窗和一个麦克风孔。它是后续 PCB 适配的目标结构，不代表现有 PCB 已适配。",
+    src: `cad-touch-front-target.svg?v=${assetVersion}`,
+    alt: "与主页产品图一致的八十六毫米四区齐平触控面参数化 CAD 正面工程图",
     className: "",
+    downloads: [
+      { label: "下载 DXF", href: "cad-touch-front-profile-target.dxf" },
+    ],
   },
   {
     no: "03",
-    title: "现有装配 CAD 基线",
-    summary: "当前装配关系保留作重构输入 · 非触控版最终结构",
-    detail: "直接取自当前外壳装配 CAD，用于检查面板、底壳和 86 型安装关系；下一版仍需按薄型触控结构重构。",
-    src: `cad-enclosure-current.svg?v=${assetVersion}`,
-    alt: "当前方言语音控制开关外壳装配 CAD 线框图",
+    title: "四区触控目标装配 CAD",
+    summary: "面板 / 触控电极占位 / PCB 占位 / 载架 / 后壳",
+    detail: "可下载的参数化装配目标，分层表达薄型面板、四区触控电极占位、PCB 占位体、载架和后壳。PCB 目前只按机械包络占位，待你后续改板后必须替换并重新做碰撞、声学、热、端子和安规检查。",
+    src: `cad-touch-assembly-target.svg?v=${assetVersion}`,
+    alt: "四区齐平触控面板、触控电极占位、PCB 占位、载架和后壳的爆炸装配 CAD 工程图",
     className: "assembly-view",
+    downloads: [
+      { label: "下载 STEP", href: "cad-touch-enclosure-target.step" },
+      { label: "下载 STL", href: "cad-touch-enclosure-target.stl" },
+    ],
   },
 ] as const;
 const preorderApiUrl = "https://fangyan-voice-switch.xiaoyilei77.chatgpt.site/api/preorder";
@@ -485,13 +492,12 @@ export default function Home() {
             <h2 id="engineering-views-title">不靠想象替代结构，<br />每一张图都有来源。</h2>
           </div>
           <p>
-            PCB 图由当前已保存路由快照直接重绘，只代表现阶段工程基线，后续 PCB 修改后会另版更新；
-            正面与装配图直接取自当前外壳 CAD。现有 CAD 仍是机械四键结构基线，下一轮需按“四块齐平触控面”重构；
-            这些图不是量产照片，也不代表已通过实物验证。
+            PCB 图保留当前已保存路由快照；正面与装配 CAD 已改成与主页一致的四块纵向齐平触控面。
+            新 CAD 是后续 PCB 适配的目标结构，当前仅使用 PCB 机械包络占位；这些图不是量产照片，也不代表已经通过实物验证。
           </p>
         </div>
         <p className="engineering-baseline-note" data-reveal>
-          <strong>当前 PCB 保存态</strong><span>用于记录现阶段布局与连线 · 后续改板将另版更新</span>
+          <strong>外壳目标结构已更新</strong><span>匹配主页四区齐平触控面 · PCB 待后续适配</span>
         </p>
         <div className="engineering-view-grid">
           {engineeringViews.map((view, index) => (
@@ -512,6 +518,13 @@ export default function Home() {
               <figcaption>
                 <div><span>{view.no}</span><strong>{view.title}</strong></div>
                 <p>{view.summary}</p>
+                {"downloads" in view && (
+                  <div className="engineering-downloads">
+                    {view.downloads.map((download) => (
+                      <a key={download.href} href={download.href} download>{download.label}</a>
+                    ))}
+                  </div>
+                )}
               </figcaption>
             </figure>
           ))}
