@@ -96,43 +96,7 @@ const roadmap = [
   },
 ] as const;
 
-const assetVersion = "20260812-touch-cad1";
-const engineeringViews = [
-  {
-    no: "01",
-    title: "PCB 当前保存态路由",
-    summary: "50 个网络 · 695 段走线 · 41 个过孔",
-    detail: "由当前已保存 PCB 快照重绘，补充器件位号、焊盘包络、安装槽与工程图例。它只代表现阶段 PCB 保存态；后续你修改 PCB 后，再从新版工程数据另版更新。",
-    src: `pcb-live-routing.png?v=${assetVersion}`,
-    alt: "由当前已保存 PCB 路由快照重绘的八十六毫米单板工程图，包含器件位号、焊盘、走线和安装槽",
-    className: "board-view",
-  },
-  {
-    no: "02",
-    title: "四区齐平触控正面 CAD",
-    summary: "86 × 86 毫米 · 四块等宽纵向触控面 · 4 个灯窗",
-    detail: "由参数化 CAD 重新生成，正面结构与主页产品图一致：四块独立、等宽、纵向齐平触控面，保留四个灯窗和一个麦克风孔。它是后续 PCB 适配的目标结构，不代表现有 PCB 已适配。",
-    src: `cad-touch-front-target.svg?v=${assetVersion}`,
-    alt: "与主页产品图一致的八十六毫米四区齐平触控面参数化 CAD 正面工程图",
-    className: "",
-    downloads: [
-      { label: "下载 DXF", href: "cad-touch-front-profile-target.dxf" },
-    ],
-  },
-  {
-    no: "03",
-    title: "四区触控目标装配 CAD",
-    summary: "面板 / 触控电极占位 / PCB 占位 / 载架 / 后壳",
-    detail: "可下载的参数化装配目标，分层表达薄型面板、四区触控电极占位、PCB 占位体、载架和后壳。PCB 目前只按机械包络占位，待你后续改板后必须替换并重新做碰撞、声学、热、端子和安规检查。",
-    src: `cad-touch-assembly-target.svg?v=${assetVersion}`,
-    alt: "四区齐平触控面板、触控电极占位、PCB 占位、载架和后壳的爆炸装配 CAD 工程图",
-    className: "assembly-view",
-    downloads: [
-      { label: "下载 STEP", href: "cad-touch-enclosure-target.step" },
-      { label: "下载 STL", href: "cad-touch-enclosure-target.stl" },
-    ],
-  },
-] as const;
+const assetVersion = "20260812-no-engineering";
 const preorderApiUrl = "https://fangyan-voice-switch.xiaoyilei77.chatgpt.site/api/preorder";
 
 export default function Home() {
@@ -141,13 +105,10 @@ export default function Home() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [planOpen, setPlanOpen] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(false);
-  const [engineeringViewIndex, setEngineeringViewIndex] = useState<number | null>(null);
-  const [engineeringZoom, setEngineeringZoom] = useState(1);
   const [formState, setFormState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [formMessage, setFormMessage] = useState("");
   const stageRef = useRef<HTMLDivElement | null>(null);
   const registrationDialogRef = useRef<HTMLDivElement | null>(null);
-  const engineeringDialogRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => {
@@ -192,24 +153,6 @@ export default function Home() {
     };
   }, [registrationOpen]);
 
-  useEffect(() => {
-    if (engineeringViewIndex === null) return;
-
-    const previousOverflow = document.body.style.overflow;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setEngineeringViewIndex(null);
-    };
-
-    document.body.style.overflow = "hidden";
-    engineeringDialogRef.current?.focus();
-    window.addEventListener("keydown", closeOnEscape);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [engineeringViewIndex]);
-
   const moveSpotlight = (event: PointerEvent<HTMLDivElement>) => {
     const target = stageRef.current;
     if (!target) return;
@@ -247,11 +190,6 @@ export default function Home() {
     setFormState("idle");
     setFormMessage("");
     setRegistrationOpen(true);
-  };
-
-  const openEngineeringView = (index: number) => {
-    setEngineeringZoom(1);
-    setEngineeringViewIndex(index);
   };
 
   const submitPreorder = async (event: FormEvent<HTMLFormElement>) => {
@@ -485,52 +423,6 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="engineering-views section-shell" aria-labelledby="engineering-views-title">
-        <div className="engineering-views-heading" data-reveal>
-          <div>
-            <p className="section-kicker">真实工程视图</p>
-            <h2 id="engineering-views-title">不靠想象替代结构，<br />每一张图都有来源。</h2>
-          </div>
-          <p>
-            PCB 图保留当前已保存路由快照；正面与装配 CAD 已改成与主页一致的四块纵向齐平触控面。
-            新 CAD 是后续 PCB 适配的目标结构，当前仅使用 PCB 机械包络占位；这些图不是量产照片，也不代表已经通过实物验证。
-          </p>
-        </div>
-        <p className="engineering-baseline-note" data-reveal>
-          <strong>外壳目标结构已更新</strong><span>匹配主页四区齐平触控面 · PCB 待后续适配</span>
-        </p>
-        <div className="engineering-view-grid">
-          {engineeringViews.map((view, index) => (
-            <figure
-              className={`engineering-view-card ${view.className}`.trim()}
-              key={view.no}
-              data-reveal
-            >
-              <button
-                className="engineering-media-button"
-                type="button"
-                onClick={() => openEngineeringView(index)}
-                aria-label={`打开高清${view.title}`}
-              >
-                <img src={view.src} alt={view.alt} />
-                <span className="engineering-open-hint">点击查看高清工程图 <i aria-hidden="true">↗</i></span>
-              </button>
-              <figcaption>
-                <div><span>{view.no}</span><strong>{view.title}</strong></div>
-                <p>{view.summary}</p>
-                {"downloads" in view && (
-                  <div className="engineering-downloads">
-                    {view.downloads.map((download) => (
-                      <a key={download.href} href={download.href} download>{download.label}</a>
-                    ))}
-                  </div>
-                )}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      </section>
-
       <section className="preorder section-shell" id="preorder">
         <div className="preorder-card" data-reveal>
           <div className="preorder-copy">
@@ -647,45 +539,6 @@ export default function Home() {
                 {formMessage || "这是一份体验意向登记，本页面不收取订金。"}
               </p>
             </form>
-          </div>
-        </div>
-      )}
-
-      {engineeringViewIndex !== null && (
-        <div className="engineering-overlay">
-          <div
-            className="engineering-dialog"
-            ref={engineeringDialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="engineering-dialog-title"
-            tabIndex={-1}
-          >
-            <div className="engineering-dialog-bar">
-              <div>
-                <span>{engineeringViews[engineeringViewIndex].no} · 高清工程视图</span>
-                <h3 id="engineering-dialog-title">{engineeringViews[engineeringViewIndex].title}</h3>
-              </div>
-              <div className="engineering-dialog-actions">
-                <button type="button" onClick={() => setEngineeringZoom((zoom) => Math.max(0.75, zoom - 0.25))} aria-label="缩小工程图">−</button>
-                <output aria-label="当前缩放比例">{Math.round(engineeringZoom * 100)}%</output>
-                <button type="button" onClick={() => setEngineeringZoom((zoom) => Math.min(3, zoom + 0.25))} aria-label="放大工程图">＋</button>
-                <button type="button" onClick={() => setEngineeringZoom(1)}>还原</button>
-                <a href={engineeringViews[engineeringViewIndex].src} target="_blank" rel="noreferrer">打开原图 ↗</a>
-                <button className="engineering-dialog-close" type="button" onClick={() => setEngineeringViewIndex(null)} aria-label="关闭高清工程图">×</button>
-              </div>
-            </div>
-            <div className="engineering-image-viewport">
-              <img
-                src={engineeringViews[engineeringViewIndex].src}
-                alt={engineeringViews[engineeringViewIndex].alt}
-                style={{ width: `${engineeringZoom * 100}%`, minWidth: `${engineeringZoom * 100}%` }}
-              />
-            </div>
-            <div className="engineering-dialog-note">
-              <p>{engineeringViews[engineeringViewIndex].detail}</p>
-              <span>拖动滚动条查看细节 · 按 Esc 关闭</span>
-            </div>
           </div>
         </div>
       )}

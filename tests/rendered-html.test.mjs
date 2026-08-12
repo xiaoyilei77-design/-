@@ -66,51 +66,22 @@ test("opens the Chinese registration form from the experience invite modal", asy
   assert.doesNotMatch(source, /信息去向|安全写入飞书|写入飞书多维表格/);
 });
 
-test("ships the saved PCB view and a real four-zone parametric CAD target", async () => {
+test("keeps the product imagery while removing all public engineering views", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
-  const pcbImage = await readFile(new URL("../public/pcb-live-routing.png", import.meta.url));
   const conceptImage = await readFile(new URL("../public/product-concept-thin-touch.png", import.meta.url));
   const standbyConceptImage = await readFile(new URL("../public/product-concept-thin-touch-standby.png", import.meta.url));
-  const frontSvg = await readFile(new URL("../public/cad-touch-front-target.svg", import.meta.url), "utf8");
-  const assemblySvg = await readFile(new URL("../public/cad-touch-assembly-target.svg", import.meta.url), "utf8");
-  const cadReport = JSON.parse(await readFile(new URL("../public/cad-touch-enclosure-target.validation.json", import.meta.url), "utf8"));
-  const stepFile = await readFile(new URL("../public/cad-touch-enclosure-target.step", import.meta.url));
-  const stlFile = await readFile(new URL("../public/cad-touch-enclosure-target.stl", import.meta.url));
 
-  assert.equal(pcbImage.toString("ascii", 1, 4), "PNG");
-  assert.equal(pcbImage.readUInt32BE(16), 2400);
-  assert.equal(pcbImage.readUInt32BE(20), 2400);
   assert.equal(conceptImage.toString("ascii", 1, 4), "PNG");
   assert.equal(conceptImage.readUInt32BE(16), 1672);
   assert.equal(conceptImage.readUInt32BE(20), 941);
   assert.equal(standbyConceptImage.toString("ascii", 1, 4), "PNG");
   assert.equal(standbyConceptImage.readUInt32BE(16), 1672);
   assert.equal(standbyConceptImage.readUInt32BE(20), 941);
-  assert.equal((frontSvg.match(/<path\b/g) ?? []).length, 110);
-  assert.equal((assemblySvg.match(/<path\b/g) ?? []).length, 494);
-  assert.match(frontSvg, /stroke="#d7b87e"/);
-  assert.match(assemblySvg, /stroke="#d7b87e"/);
-  assert.equal(cadReport.status, "DIGITAL_DESIGN_CANDIDATE_MEASUREMENT_GATED");
-  assert.equal(cadReport.geometry.touch_zone_count, 4);
-  assert.equal(cadReport.geometry.light_window_count, 4);
-  assert.equal(cadReport.release_boundaries.pcb_adapted, false);
-  assert.ok(stepFile.length > 400_000);
-  assert.ok(stlFile.length > 200_000);
-  assert.match(pageSource, /className: "assembly-view"/);
-  assert.match(pageSource, /四区齐平触控正面 CAD/);
-  assert.match(pageSource, /四区触控目标装配 CAD/);
-  assert.match(pageSource, /PCB 待后续适配/);
-  assert.match(pageSource, /20260812-touch-cad1/);
+  assert.match(pageSource, /20260812-no-engineering/);
   assert.match(pageSource, /product-concept-thin-touch-standby\.png/);
-  assert.match(pageSource, /cad-touch-front-target\.svg/);
-  assert.match(pageSource, /cad-touch-assembly-target\.svg/);
-  assert.match(pageSource, /下载 STEP/);
-  assert.match(pageSource, /下载 STL/);
-  assert.match(pageSource, /下载 DXF/);
-  assert.equal((pageSource.match(/className="engineering-media-button"/g) ?? []).length, 1);
-  assert.match(pageSource, /点击查看高清工程图/);
-  assert.match(pageSource, /aria-label="放大工程图"/);
-  assert.match(pageSource, /打开原图/);
+  assert.doesNotMatch(pageSource, /真实工程视图|高清工程视图|engineeringViews|engineeringViewIndex/);
+  assert.doesNotMatch(pageSource, /pcb-live-routing|cad-touch-|cad-front-face-current|cad-enclosure-current/);
+  assert.doesNotMatch(pageSource, /下载 STEP|下载 STL|下载 DXF|点击查看高清工程图|打开原图/);
   assert.doesNotMatch(pageSource, /保留实体按键|首版只实装第一路|潮汕话语音为候选方向/);
 });
 
