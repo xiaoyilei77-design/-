@@ -35,6 +35,10 @@ test("renders the Chinese product page with registration deferred to the experie
   const html = await response.text();
   assert.match(html, /<html lang="zh-CN">/);
   assert.match(html, /方言语音控制开关/);
+  assert.match(html, /万声智家/);
+  assert.match(html, /千音语音助手/);
+  assert.match(html, /四块独立齐平触控面/);
+  assert.match(html, /普通话与潮汕话/);
   assert.match(html, /体验邀请/);
   assert.match(html, /点击登记/);
   assert.doesNotMatch(html, /name="name"/);
@@ -65,16 +69,24 @@ test("opens the Chinese registration form from the experience invite modal", asy
 test("ships high-resolution engineering views without altering the CAD path set", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const pcbImage = await readFile(new URL("../public/pcb-live-routing.png", import.meta.url));
+  const conceptImage = await readFile(new URL("../public/product-concept-thin-touch.png", import.meta.url));
   const enclosureSvg = await readFile(new URL("../public/cad-enclosure-current.svg", import.meta.url), "utf8");
 
   assert.equal(pcbImage.toString("ascii", 1, 4), "PNG");
   assert.equal(pcbImage.readUInt32BE(16), 2400);
   assert.equal(pcbImage.readUInt32BE(20), 2400);
+  assert.equal(conceptImage.toString("ascii", 1, 4), "PNG");
+  assert.equal(conceptImage.readUInt32BE(16), 1672);
+  assert.equal(conceptImage.readUInt32BE(20), 941);
   assert.equal((enclosureSvg.match(/<path\b/g) ?? []).length, 219);
   assert.match(enclosureSvg, /viewBox="0 0 1200 900"/);
   assert.match(enclosureSvg, /stroke="#d7b87e"/);
   assert.match(pageSource, /className="engineering-view-card assembly-view"/);
-  assert.match(pageSource, /外框、载板、四键与导光结构的当前装配关系/);
+  assert.match(pageSource, /现有 CAD 仍是机械四键结构基线/);
+  assert.match(pageSource, /待改四块齐平触控面/);
+  assert.match(pageSource, /product-concept-thin-touch\.png/);
+  assert.equal((pageSource.match(/20260812-touch4/g) ?? []).length, 5);
+  assert.doesNotMatch(pageSource, /保留实体按键|首版只实装第一路|潮汕话语音为候选方向/);
 });
 
 test("rejects malformed and cross-origin preorder submissions", async () => {

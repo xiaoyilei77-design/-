@@ -19,21 +19,21 @@ const navItems = [
 const features = [
   {
     no: "壹",
-    title: "方言，应该被听见",
-    text: "以离线潮汕话语音为候选方向，让家的控制方式更接近日常说话，而不是要求家人学习机器的语言。",
-    note: "潮汕话模型仍在验证",
+    title: "先听懂家乡话",
+    text: "首发以普通话与潮汕话离线识别起步，优先优化澄海、潮南、普宁、揭阳口音；开灯、关灯等常用指令不必先说唤醒词。",
+    note: "离线模型待实测",
   },
   {
     no: "贰",
-    title: "一次开口，照顾四处灯光",
-    text: "四路共板的产品构想，把客厅、餐厅、卧室与走廊收进一块 86 型面板；当前先验证第一路。",
-    note: "第一路工程验证",
+    title: "四块面板，四路灯光",
+    text: "一块标准 86 型面板分成四块独立齐平触控区，最多控制四路照明。每一路都能单独触摸开关，不使用机械按键行程。",
+    note: "四区电容触控",
   },
   {
     no: "叁",
-    title: "智能退后，生活向前",
-    text: "保留实体按键作为第一秩序。语音、按键与后续无线能力服务于同一件事：少一次寻找，多一分从容。",
-    note: "按键始终可达",
+    title: "光与声音，轻轻回应",
+    text: "待机暖白、开启暖金，再配一声克制的提示音。首发只做照明开关，把最常用的动作先做稳定、做自然。",
+    note: "无机械行程",
   },
 ] as const;
 
@@ -46,12 +46,12 @@ const thoughts = [
   {
     index: "02",
     title: "把复杂藏进墙里",
-    text: "不是把更多界面搬上墙，而是让技术退到背后：看得见的是克制的四键面板，听得见的是自然的回应。",
+    text: "不是把更多界面搬上墙，而是让技术退到背后：看得见的是克制的四区薄面板，听得见的是千音自然的回应。",
   },
   {
     index: "03",
     title: "为变化留下余地",
-    text: "同一块板预留四路能力，首版只实装第一路。先把最小闭环做实，再让产品在验证中生长。",
+    text: "测试阶段先把离线开关灯做实；后续再加入蓝牙、4G、手机配置与云端升级，并通过网关连接更多家居器件。",
   },
   {
     index: "04",
@@ -61,19 +61,45 @@ const thoughts = [
 ] as const;
 
 const progressItems = [
-  ["已完成", "86 × 86 毫米单板全网布线与双层铺铜"],
-  ["已完成", "ERC 0 / PCB DRC 0 / 50 个网络全连通"],
-  ["已完成", "单路首验受控制造资料候选包与独立回读"],
-  ["待验证", "外部 DFM、实物装配、方言模型、温升、浪涌与电磁兼容"],
+  ["已确认", "86 型零火线供电、四路照明与四块齐平触控面的产品定义"],
+  ["已完成", "当前 PCB 数字工程基线：ERC 0、PCB DRC 0、50 个网络全连通"],
+  ["进行中", "薄型阻燃塑料外壳、离线普通话与潮汕话识别方案收敛"],
+  ["待验证", "触控版结构、实物装配、方言模型、温升、浪涌与电磁兼容"],
 ] as const;
 
-const roomNames = ["客厅", "餐厅", "卧室", "走廊"] as const;
-const cadLedPositions = [34.53, 45.58, 56.63, 67.67] as const;
-const cadButtonPositions = [52.33, 60.47, 68.6, 76.74] as const;
+const roomNames = ["客厅主灯", "餐厅灯", "卧室灯", "走廊灯"] as const;
+
+const productSpecs = [
+  ["86 × 86", "标准 86 型底盒"],
+  ["L + N", "零火线供电"],
+  ["四路", "照明开关控制"],
+  ["四块", "独立齐平触控面"],
+  ["阻燃塑料", "薄型外壳目标"],
+  ["暖白 / 暖金", "灯光与轻提示音"],
+] as const;
+
+const roadmap = [
+  {
+    phase: "现在 · 离线首验",
+    title: "先把开灯、关灯做稳",
+    text: "普通话与潮汕话离线识别起步，优先适配澄海、潮南、普宁、揭阳口音；四路照明名称从预设词库选择。",
+  },
+  {
+    phase: "下一步 · 联网演进",
+    title: "蓝牙与 4G 让配置更自由",
+    text: "通过手机自定义灯光名称；联网识别可判断使用者方言，并以相近方言回应，能力以实测结果为准。",
+  },
+  {
+    phase: "未来 · 万声智家",
+    title: "从一面开关走向全屋协同",
+    text: "以网关连接更多家居器件，由手机与云端完成配置、控制和升级；这是规划方向，不是首发已具备功能。",
+  },
+] as const;
 const preorderApiUrl = "https://fangyan-voice-switch.xiaoyilei77.chatgpt.site/api/preorder";
 
 export default function Home() {
   const [lights, setLights] = useState([false, false, false, false]);
+  const [lastFeedback, setLastFeedback] = useState("轻触任一分区，体验四路灯光反馈");
   const [scrollProgress, setScrollProgress] = useState(0);
   const [planOpen, setPlanOpen] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(false);
@@ -134,9 +160,28 @@ export default function Home() {
   };
 
   const toggleLight = (index: number) => {
+    const nextState = !lights[index];
     setLights((current) =>
       current.map((state, stateIndex) => (stateIndex === index ? !state : state)),
     );
+    setLastFeedback(`${roomNames[index]}${nextState ? "已开启" : "已关闭"} · ${nextState ? "暖金" : "暖白"}提示`);
+
+    try {
+      const audioContext = new AudioContext();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(nextState ? 660 : 520, audioContext.currentTime);
+      gain.gain.setValueAtTime(0.025, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.08);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.08);
+      oscillator.addEventListener("ended", () => void audioContext.close());
+    } catch {
+      // 浏览器禁用音频时，灯光状态与文字反馈仍可正常工作。
+    }
   };
 
   const openRegistration = () => {
@@ -192,8 +237,8 @@ export default function Home() {
 
       <header className="site-header">
         <a className="brand" href="#top" aria-label="返回首页">
-          <span className="brand-mark">声</span>
-          <span>方言语音控制开关</span>
+          <span className="brand-mark">千</span>
+          <span className="brand-copy"><strong>万声智家</strong><small>方言语音控制开关</small></span>
         </a>
         <nav aria-label="主导航">
           {navItems.map(([id, label]) => (
@@ -206,12 +251,15 @@ export default function Home() {
       <section className="hero" id="top">
         <div className="hero-grain" aria-hidden="true" />
         <div className="hero-copy" data-reveal>
-          <p className="eyebrow"><span /> 独立研发 · 方言语音控制开关</p>
-          <h1>让一句乡音，<br />点亮一整个家。</h1>
+          <p className="eyebrow"><span /> 万声智家 · 千音语音助手</p>
+          <h1>让每一种乡音，<br />点亮一个家。</h1>
           <p className="hero-lead">
-            一块为中国家庭语境而做的 AI 语音四路灯控开关。让技术藏进墙里，
-            把更自然的控制方式还给日常。
+            面向标准 86 型底盒的零火线四路灯控开关。首发从普通话与潮汕话离线控制开灯、关灯开始，
+            把四块独立触控面做得更薄、更贴近墙面。
           </p>
+          <div className="hero-tags" aria-label="首发产品要点">
+            <span>普通话＋潮汕话</span><span>离线首验</span><span>86 型零火线</span><span>四路触控</span>
+          </div>
           <div className="hero-actions">
             <a className="button button-solid" href="#product">向下了解 <span>↓</span></a>
             <a className="button button-ghost" href="#thinking">我的创建思路</a>
@@ -222,42 +270,32 @@ export default function Home() {
           className="hero-stage"
           ref={stageRef}
           onPointerMove={moveSpotlight}
-          aria-label="依据当前外壳 CAD 制作的四路灯控网页交互预览"
+          aria-label="四块独立触控面的方言语音控制开关概念图与网页交互模拟"
           data-reveal
         >
-          <div className="stage-orbit orbit-one" aria-hidden="true" />
-          <div className="stage-orbit orbit-two" aria-hidden="true" />
           <div className="voice-wave" aria-hidden="true">
             {Array.from({ length: 18 }).map((_, index) => <i key={index} />)}
           </div>
-          <div className="switch-shadow" aria-hidden="true" />
-          <div className="switch-body" aria-hidden="true" />
-          <div className="switch-plate">
-            {lights.map((isOn, index) => (
-              <span
-                key={`led-${index}`}
-                className={isOn ? "cad-led is-on" : "cad-led"}
-                style={{ left: `${cadLedPositions[index]}%` }}
-                aria-hidden="true"
-              />
-            ))}
+          <div className="hero-product-visual">
+            <img src="/product-concept-thin-touch.png?v=20260812-touch4" alt="安装在墙面的薄型四路方言语音控制开关，正面分成四块独立齐平触控面" />
+            <span>四区薄型触控概念渲染 · 非量产实物</span>
+          </div>
+          <div className="light-control-panel" aria-label="四路照明网页交互模拟">
             {lights.map((isOn, index) => (
               <button
-                key={`button-${index}`}
-                className={isOn ? "cad-button is-on" : "cad-button"}
-                style={{ left: `${cadButtonPositions[index]}%` }}
+                key={roomNames[index]}
+                className={isOn ? "light-control is-on" : "light-control"}
                 onClick={() => toggleLight(index)}
                 aria-pressed={isOn}
-                aria-label={`${roomNames[index]}灯网页模拟，当前${isOn ? "已打开" : "已关闭"}`}
-              />
+                aria-label={`${roomNames[index]}网页模拟，当前${isOn ? "已打开" : "已关闭"}`}
+              >
+                <i aria-hidden="true" />
+                <span>{roomNames[index]}</span>
+                <small>{isOn ? "已开启" : "已关闭"}</small>
+              </button>
             ))}
-            <span className="cad-mic" aria-hidden="true" />
           </div>
-          <div className="hero-model-caption">
-            <span>86 × 86 毫米</span>
-            <span>依据当前外壳 CAD</span>
-            <span>{lights.filter(Boolean).length} / 4 网页模拟点亮</span>
-          </div>
+          <p className="hero-feedback" role="status" aria-live="polite">{lastFeedback} · {lights.filter(Boolean).length} / 4 路点亮</p>
         </div>
 
         <div className="scroll-cue" aria-hidden="true">
@@ -297,6 +335,19 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="product-specs section-shell" aria-labelledby="product-specs-title">
+        <div className="specs-heading" data-reveal>
+          <p className="section-kicker">首发定义</p>
+          <h2 id="product-specs-title">先把照明开关，<br />做到足够自然。</h2>
+          <p>首发只控制照明的开与关；不承诺调光、调色温、插座、窗帘或其他负载。安装需由专业电工完成。</p>
+        </div>
+        <div className="spec-grid" data-reveal>
+          {productSpecs.map(([value, label]) => (
+            <div key={label}><strong>{value}</strong><span>{label}</span></div>
+          ))}
+        </div>
+      </section>
+
       <section className="thinking" id="thinking">
         <div className="section-shell">
           <div className="thinking-intro" data-reveal>
@@ -318,12 +369,12 @@ export default function Home() {
 
       <section className="showcase" id="showcase">
         <div className="showcase-media" data-reveal>
-          <img src="/product-concept-2x.jpg" alt="依据当前外壳 CAD 轮廓制作的方言语音控制开关高清概念渲染图" />
+          <img src="/product-concept-thin-touch.png?v=20260812-touch4" alt="薄型四路方言语音控制开关概念渲染，正面清晰分成四块独立齐平触控面" />
           <div className="showcase-overlay">
             <p>方言语音控制开关</p>
-            <span>声入其境</span>
+            <span>千音 · 听懂每一种乡音</span>
           </div>
-          <span className="concept-label">基于当前外壳 CAD · 非量产实物</span>
+          <span className="concept-label">四区薄型触控概念渲染 · 非量产实物</span>
         </div>
         <div className="showcase-caption section-shell" data-reveal>
           <div>
@@ -331,9 +382,26 @@ export default function Home() {
             <h2>器物有形，<br />回应无声。</h2>
           </div>
           <p>
-            依照当前 86 × 86 毫米外壳轮廓，保留四枚独立小按键、四个导光点与右下拾音孔。
-            材质与光影仍是概念表达，结构尺寸继续以样机实测闭环。
+            目标外观采用全阻燃塑料结构：正面明确分成四块独立齐平触控面，不设机械按键行程；
+            待机暖白、开启暖金，并以轻微提示音回应。厚度、阻燃等级与装配尺寸仍需样机实测闭环。
           </p>
+        </div>
+      </section>
+
+      <section className="roadmap section-shell" aria-labelledby="roadmap-title">
+        <div className="roadmap-heading" data-reveal>
+          <p className="section-kicker">演进路径</p>
+          <h2 id="roadmap-title">从一面开关，<br />走向万声智家。</h2>
+        </div>
+        <div className="roadmap-list">
+          {roadmap.map((item, index) => (
+            <article key={item.phase} data-reveal>
+              <span>0{index + 1}</span>
+              <p>{item.phase}</p>
+              <h3>{item.title}</h3>
+              <div>{item.text}</div>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -345,12 +413,12 @@ export default function Home() {
           </div>
           <p>
             PCB 图由最新已保存路由快照直接重绘；正面与装配图直接取自当前外壳 CAD。
-            它们是工程数据的可视化，不是量产照片，也不代表已通过实物验证。
+            现有 CAD 仍是机械四键结构基线，下一轮需按“四块齐平触控面”重构；这些图不是量产照片，也不代表已通过实物验证。
           </p>
         </div>
         <div className="engineering-view-grid">
           <figure className="engineering-view-card board-view" data-reveal>
-            <img src="/pcb-live-routing.png" alt="由当前已保存 PCB 路由快照直接重绘的八十六毫米单板走线图" />
+            <img src="/pcb-live-routing.png?v=20260812-touch4" alt="由当前已保存 PCB 路由快照直接重绘的八十六毫米单板走线图" />
             <figcaption>
               <div><span>01</span><strong>PCB 全网路由</strong></div>
               <p>50 个网络 · 695 段走线 · 41 个过孔</p>
@@ -358,17 +426,17 @@ export default function Home() {
           </figure>
           <div className="cad-view-stack">
             <figure className="engineering-view-card" data-reveal>
-              <img src="/cad-front-face-current.svg" alt="当前方言语音控制开关八十六毫米正面 CAD 线框图" />
+              <img src="/cad-front-face-current.svg?v=20260812-touch4" alt="当前方言语音控制开关八十六毫米正面 CAD 线框图" />
               <figcaption>
-                <div><span>02</span><strong>正面 CAD</strong></div>
-                <p>四枚独立小按键 · 四个导光点 · 右下拾音孔</p>
+                <div><span>02</span><strong>现有正面 CAD 基线</strong></div>
+                <p>当前四机械键仅作尺寸对照 · 待改四块齐平触控面</p>
               </figcaption>
             </figure>
             <figure className="engineering-view-card assembly-view" data-reveal>
-              <img src="/cad-enclosure-current.svg" alt="当前方言语音控制开关外壳装配 CAD 线框图" />
+              <img src="/cad-enclosure-current.svg?v=20260812-touch4" alt="当前方言语音控制开关外壳装配 CAD 线框图" />
               <figcaption>
-                <div><span>03</span><strong>外壳装配 CAD</strong></div>
-                <p>外框、载板、四键与导光结构的当前装配关系</p>
+                <div><span>03</span><strong>现有装配 CAD 基线</strong></div>
+                <p>当前装配关系保留作重构输入 · 非触控版最终结构</p>
               </figcaption>
             </figure>
           </div>
@@ -393,8 +461,8 @@ export default function Home() {
           </div>
         </div>
         <div className={planOpen ? "preorder-path is-open" : "preorder-path"} aria-hidden={!planOpen}>
-          <div><span>一</span><strong>工程基线</strong><p>已完成全网布线、双层铺铜与规则复核</p></div>
-          <div><span>二</span><strong>样机实测</strong><p>验证方言、负载、温升、浪涌与长期稳定性</p></div>
+          <div><span>一</span><strong>定义收敛</strong><p>86 型零火线、四路照明与四块齐平触控面</p></div>
+          <div><span>二</span><strong>样机实测</strong><p>验证触控、方言、负载、温升、浪涌与长期稳定性</p></div>
           <button className="preorder-path-action" type="button" onClick={openRegistration} tabIndex={planOpen ? 0 : -1}>
             <span>三</span><strong>体验邀请</strong><p>填写体验信息，优先获得首批邀请与进展通知</p><i>点击登记 →</i>
           </button>
@@ -501,8 +569,8 @@ export default function Home() {
             <p className="section-kicker">工程进度</p>
             <h2>诚实，<br />也是产品的一部分。</h2>
             <p>
-              当前产品处于 86 × 86 毫米单板工程原型阶段，已形成单路首验受控制造资料候选包。
-              尚未通过外部 DFM、实物装配与市电样机验证，网站演示也不代表商用成品。
+              产品定义已收敛为标准 86 型底盒、零火线供电、最多四路照明和四块独立齐平触控面。
+              当前工程数据不等于触控薄型外壳已经完成；尚未通过外部 DFM、实物装配与市电样机验证。
             </p>
           </div>
           <div className="status-list">
@@ -516,17 +584,17 @@ export default function Home() {
           </div>
         </div>
         <div className="engineering-numbers section-shell" data-reveal>
-          <div><strong>86 × 86</strong><span>毫米单板轮廓</span></div>
-          <div><strong>50</strong><span>个网络全连通</span></div>
-          <div><strong>695</strong><span>段已保存走线</span></div>
-          <div><strong>41</strong><span>个已保存过孔</span></div>
+          <div><strong>86 × 86</strong><span>毫米标准面板</span></div>
+          <div><strong>4</strong><span>块独立触控面</span></div>
+          <div><strong>2</strong><span>类首发语言</span></div>
+          <div><strong>4</strong><span>个潮汕重点口音</span></div>
         </div>
       </section>
 
       <footer>
-        <div className="footer-mark">声</div>
+        <div className="footer-mark">千</div>
         <p>让技术隐于墙内，让生活回到眼前。</p>
-        <span>方言语音控制开关 · 独立创作中</span>
+        <span>万声智家 · 千音语音助手 · 方言语音控制开关</span>
         <a href="#top">回到顶部 ↑</a>
       </footer>
     </main>
