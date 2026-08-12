@@ -95,6 +95,37 @@ const roadmap = [
     text: "以网关连接更多家居器件，由手机与云端完成配置、控制和升级；这是规划方向，不是首发已具备功能。",
   },
 ] as const;
+
+const assetVersion = "20260812-engineering2";
+const engineeringViews = [
+  {
+    no: "01",
+    title: "PCB 全网路由",
+    summary: "50 个网络 · 695 段走线 · 41 个过孔",
+    detail: "由当前已保存 PCB 快照重绘，补充器件位号、焊盘包络、安装槽与工程图例；属于工程可视化，不是实物照片。",
+    src: `pcb-live-routing.png?v=${assetVersion}`,
+    alt: "由当前已保存 PCB 路由快照重绘的八十六毫米单板工程图，包含器件位号、焊盘、走线和安装槽",
+    className: "board-view",
+  },
+  {
+    no: "02",
+    title: "现有正面 CAD 基线",
+    summary: "当前四机械键仅作尺寸对照 · 待改四块齐平触控面",
+    detail: "直接取自当前外壳 CAD 的矢量线框。它用于核对 86 型外廓和四区分割，不代表触控版结构已经完成。",
+    src: `cad-front-face-current.svg?v=${assetVersion}`,
+    alt: "当前方言语音控制开关八十六毫米正面 CAD 线框图",
+    className: "",
+  },
+  {
+    no: "03",
+    title: "现有装配 CAD 基线",
+    summary: "当前装配关系保留作重构输入 · 非触控版最终结构",
+    detail: "直接取自当前外壳装配 CAD，用于检查面板、底壳和 86 型安装关系；下一版仍需按薄型触控结构重构。",
+    src: `cad-enclosure-current.svg?v=${assetVersion}`,
+    alt: "当前方言语音控制开关外壳装配 CAD 线框图",
+    className: "assembly-view",
+  },
+] as const;
 const preorderApiUrl = "https://fangyan-voice-switch.xiaoyilei77.chatgpt.site/api/preorder";
 
 export default function Home() {
@@ -103,10 +134,13 @@ export default function Home() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [planOpen, setPlanOpen] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(false);
+  const [engineeringViewIndex, setEngineeringViewIndex] = useState<number | null>(null);
+  const [engineeringZoom, setEngineeringZoom] = useState(1);
   const [formState, setFormState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [formMessage, setFormMessage] = useState("");
   const stageRef = useRef<HTMLDivElement | null>(null);
   const registrationDialogRef = useRef<HTMLDivElement | null>(null);
+  const engineeringDialogRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => {
@@ -151,6 +185,24 @@ export default function Home() {
     };
   }, [registrationOpen]);
 
+  useEffect(() => {
+    if (engineeringViewIndex === null) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setEngineeringViewIndex(null);
+    };
+
+    document.body.style.overflow = "hidden";
+    engineeringDialogRef.current?.focus();
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [engineeringViewIndex]);
+
   const moveSpotlight = (event: PointerEvent<HTMLDivElement>) => {
     const target = stageRef.current;
     if (!target) return;
@@ -188,6 +240,11 @@ export default function Home() {
     setFormState("idle");
     setFormMessage("");
     setRegistrationOpen(true);
+  };
+
+  const openEngineeringView = (index: number) => {
+    setEngineeringZoom(1);
+    setEngineeringViewIndex(index);
   };
 
   const submitPreorder = async (event: FormEvent<HTMLFormElement>) => {
@@ -277,9 +334,25 @@ export default function Home() {
             {Array.from({ length: 18 }).map((_, index) => <i key={index} />)}
           </div>
           <div className="hero-product-visual">
-            <img src="/product-concept-thin-touch.png?v=20260812-touch4" alt="安装在墙面的薄型四路方言语音控制开关，正面分成四块独立齐平触控面" />
-            <span>四区薄型触控概念渲染 · 非量产实物</span>
+            <img src={`product-concept-thin-touch.png?v=${assetVersion}`} alt="安装在墙面的薄型四路方言语音控制开关，正面分成四块独立齐平触控面" />
+            <div className="product-touch-map" aria-label="直接轻触图中的四块面板">
+              {lights.map((isOn, index) => (
+                <button
+                  key={roomNames[index]}
+                  className={isOn ? "product-touch-zone is-on" : "product-touch-zone"}
+                  onClick={() => toggleLight(index)}
+                  aria-pressed={isOn}
+                  aria-label={`图中第${index + 1}块面板，${roomNames[index]}，当前${isOn ? "已打开" : "已关闭"}`}
+                  data-touch-zone={index + 1}
+                >
+                  <span>{roomNames[index]}</span>
+                  <i aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+            <span className="concept-render-label">四区薄型触控概念渲染 · 非量产实物</span>
           </div>
+          <p className="hero-touch-guidance"><span aria-hidden="true">↗</span> 直接轻触图中四块面板，模拟开关灯</p>
           <div className="light-control-panel" aria-label="四路照明网页交互模拟">
             {lights.map((isOn, index) => (
               <button
@@ -369,7 +442,7 @@ export default function Home() {
 
       <section className="showcase" id="showcase">
         <div className="showcase-media" data-reveal>
-          <img src="/product-concept-thin-touch.png?v=20260812-touch4" alt="薄型四路方言语音控制开关概念渲染，正面清晰分成四块独立齐平触控面" />
+          <img src={`product-concept-thin-touch.png?v=${assetVersion}`} alt="薄型四路方言语音控制开关概念渲染，正面清晰分成四块独立齐平触控面" />
           <div className="showcase-overlay">
             <p>方言语音控制开关</p>
             <span>千音 · 听懂每一种乡音</span>
@@ -417,29 +490,27 @@ export default function Home() {
           </p>
         </div>
         <div className="engineering-view-grid">
-          <figure className="engineering-view-card board-view" data-reveal>
-            <img src="/pcb-live-routing.png?v=20260812-touch4" alt="由当前已保存 PCB 路由快照直接重绘的八十六毫米单板走线图" />
-            <figcaption>
-              <div><span>01</span><strong>PCB 全网路由</strong></div>
-              <p>50 个网络 · 695 段走线 · 41 个过孔</p>
-            </figcaption>
-          </figure>
-          <div className="cad-view-stack">
-            <figure className="engineering-view-card" data-reveal>
-              <img src="/cad-front-face-current.svg?v=20260812-touch4" alt="当前方言语音控制开关八十六毫米正面 CAD 线框图" />
+          {engineeringViews.map((view, index) => (
+            <figure
+              className={`engineering-view-card ${view.className}`.trim()}
+              key={view.no}
+              data-reveal
+            >
+              <button
+                className="engineering-media-button"
+                type="button"
+                onClick={() => openEngineeringView(index)}
+                aria-label={`打开高清${view.title}`}
+              >
+                <img src={view.src} alt={view.alt} />
+                <span className="engineering-open-hint">点击查看高清工程图 <i aria-hidden="true">↗</i></span>
+              </button>
               <figcaption>
-                <div><span>02</span><strong>现有正面 CAD 基线</strong></div>
-                <p>当前四机械键仅作尺寸对照 · 待改四块齐平触控面</p>
+                <div><span>{view.no}</span><strong>{view.title}</strong></div>
+                <p>{view.summary}</p>
               </figcaption>
             </figure>
-            <figure className="engineering-view-card assembly-view" data-reveal>
-              <img src="/cad-enclosure-current.svg?v=20260812-touch4" alt="当前方言语音控制开关外壳装配 CAD 线框图" />
-              <figcaption>
-                <div><span>03</span><strong>现有装配 CAD 基线</strong></div>
-                <p>当前装配关系保留作重构输入 · 非触控版最终结构</p>
-              </figcaption>
-            </figure>
-          </div>
+          ))}
         </div>
       </section>
 
@@ -559,6 +630,45 @@ export default function Home() {
                 {formMessage || "这是一份体验意向登记，本页面不收取订金。"}
               </p>
             </form>
+          </div>
+        </div>
+      )}
+
+      {engineeringViewIndex !== null && (
+        <div className="engineering-overlay">
+          <div
+            className="engineering-dialog"
+            ref={engineeringDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="engineering-dialog-title"
+            tabIndex={-1}
+          >
+            <div className="engineering-dialog-bar">
+              <div>
+                <span>{engineeringViews[engineeringViewIndex].no} · 高清工程视图</span>
+                <h3 id="engineering-dialog-title">{engineeringViews[engineeringViewIndex].title}</h3>
+              </div>
+              <div className="engineering-dialog-actions">
+                <button type="button" onClick={() => setEngineeringZoom((zoom) => Math.max(0.75, zoom - 0.25))} aria-label="缩小工程图">−</button>
+                <output aria-label="当前缩放比例">{Math.round(engineeringZoom * 100)}%</output>
+                <button type="button" onClick={() => setEngineeringZoom((zoom) => Math.min(3, zoom + 0.25))} aria-label="放大工程图">＋</button>
+                <button type="button" onClick={() => setEngineeringZoom(1)}>还原</button>
+                <a href={engineeringViews[engineeringViewIndex].src} target="_blank" rel="noreferrer">打开原图 ↗</a>
+                <button className="engineering-dialog-close" type="button" onClick={() => setEngineeringViewIndex(null)} aria-label="关闭高清工程图">×</button>
+              </div>
+            </div>
+            <div className="engineering-image-viewport">
+              <img
+                src={engineeringViews[engineeringViewIndex].src}
+                alt={engineeringViews[engineeringViewIndex].alt}
+                style={{ width: `${engineeringZoom * 100}%`, minWidth: `${engineeringZoom * 100}%` }}
+              />
+            </div>
+            <div className="engineering-dialog-note">
+              <p>{engineeringViews[engineeringViewIndex].detail}</p>
+              <span>拖动滚动条查看细节 · 按 Esc 关闭</span>
+            </div>
           </div>
         </div>
       )}

@@ -81,12 +81,26 @@ test("ships high-resolution engineering views without altering the CAD path set"
   assert.equal((enclosureSvg.match(/<path\b/g) ?? []).length, 219);
   assert.match(enclosureSvg, /viewBox="0 0 1200 900"/);
   assert.match(enclosureSvg, /stroke="#d7b87e"/);
-  assert.match(pageSource, /className="engineering-view-card assembly-view"/);
+  assert.match(pageSource, /className: "assembly-view"/);
   assert.match(pageSource, /现有 CAD 仍是机械四键结构基线/);
   assert.match(pageSource, /待改四块齐平触控面/);
   assert.match(pageSource, /product-concept-thin-touch\.png/);
-  assert.equal((pageSource.match(/20260812-touch4/g) ?? []).length, 5);
+  assert.match(pageSource, /20260812-engineering2/);
+  assert.equal((pageSource.match(/className="engineering-media-button"/g) ?? []).length, 1);
+  assert.match(pageSource, /点击查看高清工程图/);
+  assert.match(pageSource, /aria-label="放大工程图"/);
+  assert.match(pageSource, /打开原图/);
   assert.doesNotMatch(pageSource, /保留实体按键|首版只实装第一路|潮汕话语音为候选方向/);
+});
+
+test("maps four accessible light controls directly onto the first product image", async () => {
+  const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(pageSource, /className="product-touch-map"/);
+  assert.match(pageSource, /product-touch-zone is-on/);
+  assert.match(pageSource, /data-touch-zone=\{index \+ 1\}/);
+  assert.match(pageSource, /onClick=\{\(\) => toggleLight\(index\)\}/);
+  assert.match(pageSource, /直接轻触图中四块面板，模拟开关灯/);
 });
 
 test("rejects malformed and cross-origin preorder submissions", async () => {

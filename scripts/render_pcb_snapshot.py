@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -73,6 +74,10 @@ def main() -> None:
     def point(x: float, y: float) -> tuple[int, int]:
         return (round(BOARD_LEFT + x * scale), round(BOARD_TOP + y * scale))
 
+    grouped_pads: dict[str, list[dict]] = defaultdict(list)
+    for pad in snapshot["pads"]:
+        grouped_pads[str(pad["owner"])].append(pad)
+
     image = Image.new("RGBA", (CANVAS_SIZE, CANVAS_SIZE), "#050908")
     image = Image.alpha_composite(
         image,
@@ -92,10 +97,10 @@ def main() -> None:
     title_font = load_font(54 * SUPERSAMPLE, serif=True)
     meta_font = load_font(19 * SUPERSAMPLE)
     legend_font = load_font(18 * SUPERSAMPLE)
-    draw.text((BOARD_LEFT, 110 * SUPERSAMPLE), "PCB 全网路由", font=title_font, fill=(239, 229, 208, 244))
+    draw.text((BOARD_LEFT, 96 * SUPERSAMPLE), "PCB 保存态工程视图", font=title_font, fill=(239, 229, 208, 244))
     draw.text(
-        (BOARD_LEFT, 215 * SUPERSAMPLE),
-        f"86 × 86 毫米  ·  {route_count} 个网络  ·  {path_count} 段走线  ·  {via_count} 个过孔",
+        (BOARD_LEFT, 202 * SUPERSAMPLE),
+        f"86 × 86 毫米  ·  74 个器件  ·  {pad_count} 个焊盘  ·  {route_count} 个网络  ·  {path_count} 段走线  ·  {via_count} 个过孔",
         font=meta_font,
         fill=(174, 188, 178, 185),
     )
@@ -141,6 +146,33 @@ def main() -> None:
         width=2 * SUPERSAMPLE,
     )
     image = Image.alpha_composite(image, board_fill)
+
+    # 使用保存快照中的器件归属与焊盘坐标绘制包络；不臆造封装三维外形。
+    component_layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    component_draw = ImageDraw.Draw(component_layer, "RGBA")
+    component_boxes: list[tuple[str, tuple[int, int, int, int]]] = []
+    major_refs = {"J1", "U1", "U3", "K1", "K2", "K3", "K4", "MIC1", "SW1", "SW2", "SW3", "SW4", "F1", "MOV1", "CX1"}
+    for owner, owner_pads in grouped_pads.items():
+        pad_boxes = []
+        for pad in owner_pads:
+            x, y = point(float(pad["x"]), float(pad["y"]))
+            width = max(10 * SUPERSAMPLE, round(float(pad["pad"][1]) * scale))
+            height = max(10 * SUPERSAMPLE, round(float(pad["pad"][2]) * scale))
+            pad_boxes.append((x - width // 2, y - height // 2, x + width // 2, y + height // 2))
+        margin = (19 if owner in major_refs else 11) * SUPERSAMPLE
+        left = max(BOARD_LEFT + 8 * SUPERSAMPLE, min(box[0] for box in pad_boxes) - margin)
+        top = max(BOARD_TOP + 8 * SUPERSAMPLE, min(box[1] for box in pad_boxes) - margin)
+        right = min(BOARD_LEFT + BOARD_SIZE - 8 * SUPERSAMPLE, max(box[2] for box in pad_boxes) + margin)
+        bottom = min(BOARD_TOP + BOARD_SIZE - 8 * SUPERSAMPLE, max(box[3] for box in pad_boxes) + margin)
+        component_boxes.append((owner, (left, top, right, bottom)))
+        component_draw.rounded_rectangle(
+            (left, top, right, bottom),
+            radius=(10 if owner in major_refs else 6) * SUPERSAMPLE,
+            fill=(5, 18, 15, 94 if owner in major_refs else 50),
+            outline=(213, 225, 215, 120 if owner in major_refs else 68),
+            width=2 * SUPERSAMPLE,
+        )
+    image = Image.alpha_composite(image, component_layer)
 
     route_layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
     route_draw = ImageDraw.Draw(route_layer, "RGBA")
@@ -200,7 +232,57 @@ def main() -> None:
             detail_draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=(211, 166, 93, 255), outline=(255, 227, 174, 245), width=2 * SUPERSAMPLE)
             detail_draw.ellipse((x - drill, y - drill, x + drill, y + drill), fill=(4, 11, 9, 255))
 
+    # 86 型横向安装槽位置来自当前机械基线：X=12.85/73.15 mm，Y=43 mm。
+    for slot_x_mm in (12.85, 73.15):
+        center_x, center_y = point(slot_x_mm / 25.4 * 1000, 43 / 25.4 * 1000)
+        slot_width = round(6.4 / 25.4 * 1000 * scale)
+        slot_height = round(4.2 / 25.4 * 1000 * scale)
+        detail_draw.rounded_rectangle(
+            (
+                center_x - slot_width // 2,
+                center_y - slot_height // 2,
+                center_x + slot_width // 2,
+                center_y + slot_height // 2,
+            ),
+            radius=slot_height // 2,
+            fill=(3, 9, 8, 255),
+            outline=(229, 194, 133, 205),
+            width=3 * SUPERSAMPLE,
+        )
+
+    ref_font = load_font(14 * SUPERSAMPLE)
+    major_ref_font = load_font(22 * SUPERSAMPLE)
+    for owner, (left, top, right, bottom) in component_boxes:
+        font = major_ref_font if owner in major_refs else ref_font
+        text_box = detail_draw.textbbox((0, 0), owner, font=font)
+        text_width = text_box[2] - text_box[0]
+        text_height = text_box[3] - text_box[1]
+        x = min(right - text_width - 5 * SUPERSAMPLE, left + 6 * SUPERSAMPLE)
+        y = max(BOARD_TOP + 5 * SUPERSAMPLE, top - text_height - 3 * SUPERSAMPLE)
+        detail_draw.text(
+            (x, y),
+            owner,
+            font=font,
+            fill=(225, 236, 226, 224 if owner in major_refs else 150),
+            stroke_width=2 * SUPERSAMPLE,
+            stroke_fill=(7, 20, 17, 210),
+        )
+
     image = Image.alpha_composite(image, details)
+
+    final_draw = ImageDraw.Draw(image, "RGBA")
+    dimension_font = load_font(15 * SUPERSAMPLE)
+    dimension_y = BOARD_TOP - 40 * SUPERSAMPLE
+    final_draw.line((BOARD_LEFT, dimension_y, BOARD_LEFT + BOARD_SIZE, dimension_y), fill=(201, 191, 168, 112), width=2 * SUPERSAMPLE)
+    final_draw.line((BOARD_LEFT, dimension_y - 8 * SUPERSAMPLE, BOARD_LEFT, dimension_y + 8 * SUPERSAMPLE), fill=(201, 191, 168, 112), width=2 * SUPERSAMPLE)
+    final_draw.line((BOARD_LEFT + BOARD_SIZE, dimension_y - 8 * SUPERSAMPLE, BOARD_LEFT + BOARD_SIZE, dimension_y + 8 * SUPERSAMPLE), fill=(201, 191, 168, 112), width=2 * SUPERSAMPLE)
+    final_draw.text((BOARD_LEFT + BOARD_SIZE // 2 - 40 * SUPERSAMPLE, dimension_y - 31 * SUPERSAMPLE), "86.00 mm", font=dimension_font, fill=(202, 193, 173, 180))
+
+    footer_font = load_font(16 * SUPERSAMPLE)
+    final_draw.text((BOARD_LEFT, 2288 * SUPERSAMPLE), "来源：V01_PCB_Live_Route_Snapshot_20260809.json", font=footer_font, fill=(158, 171, 162, 150))
+    disclaimer = "保存态工程可视化 · 非实物照片 · 非量产发布证明"
+    disclaimer_box = final_draw.textbbox((0, 0), disclaimer, font=footer_font)
+    final_draw.text((BOARD_LEFT + BOARD_SIZE - (disclaimer_box[2] - disclaimer_box[0]), 2288 * SUPERSAMPLE), disclaimer, font=footer_font, fill=(213, 180, 127, 182))
     image = image.convert("RGB").resize((FINAL_SIZE, FINAL_SIZE), Image.Resampling.LANCZOS)
     destination.parent.mkdir(parents=True, exist_ok=True)
     image.save(destination, "PNG", optimize=True)
