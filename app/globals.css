@@ -216,6 +216,9 @@ nav a:hover, nav a:focus-visible { opacity: 1; }
 .engineering-view-card figcaption strong { font-family: "Songti SC", serif; font-size: 20px; font-weight: 400; }
 .engineering-view-card figcaption p { margin: 0; color: #756c60; font-size: 12px; line-height: 1.6; }
 .engineering-view-card:not(.board-view) figcaption { grid-template-columns: 1fr; gap: 10px; }
+.engineering-downloads { display: flex; flex-wrap: wrap; gap: 8px; }
+.engineering-downloads a { padding: 7px 10px; border: 1px solid rgba(126,106,76,.26); color: #6f5435; background: rgba(255,255,255,.38); font-size: 9px; letter-spacing: .08em; transition: color .2s ease, border-color .2s ease, background .2s ease; }
+.engineering-downloads a:hover, .engineering-downloads a:focus-visible { outline: 0; color: #3e2c1a; border-color: rgba(126,82,38,.56); background: #fffaf0; }
 
 .engineering-overlay { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 28px; background: rgba(8,8,7,.88); backdrop-filter: blur(18px); animation: modal-fade .28s ease both; }
 .engineering-dialog { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: min(1500px, 96vw); height: min(940px, calc(100dvh - 56px)); overflow: hidden; color: #eee6d8; background: #11110f; border: 1px solid rgba(218,181,126,.28); box-shadow: 0 40px 140px rgba(0,0,0,.58); animation: modal-rise .36s cubic-bezier(.22,.8,.26,1) both; }
